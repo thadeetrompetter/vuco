@@ -545,3 +545,188 @@ Before instance is removed. To destroy a vue instance, call its `$destroy`
 method.
 #### `destroyed`
 instance is removed.
+
+## Components
+A Vue instance using the `el` property to select an element to bind to, can
+only be bound to a single (the first) element. Components allow you to re-use
+logic and template markup, in the form of custom elements.
+
+```javascript
+Vue.component('my-component', {
+  template: `<h1>{{ title }}</h1>`,
+  // component data can not be a property, but has be a function.
+  data(){
+    return { title: 'this is a component' }
+  }
+});
+new Vue({
+  el: '#app'
+})
+```
+
+### data
+The reason that `data` has to be returned from a function, is because
+objects are reference types. If the data in the component definition would be
+an object, all instances of the component would be using the same data.
+
+### Local components
+`Vue.component` registers components globally and makes them available for use
+by all vue instances. You can also register component locally for use by a
+specific vue instance.
+
+```html
+<div id="app">
+  <my-component>this text will be replaced</my-component>
+</div>
+<div id="another-app">
+  <my-component>my-component does nothing here...</my-component>
+</div>
+```
+
+```javascript
+const myComponentConfig = {
+  template: `<h1>{{ title }}</h1>`,
+  data(){
+    return { title: 'my local component' }
+  }
+};
+// local component registration
+new Vue({
+  el: '#app',
+  components: {
+    'my-component': myComponentConfig
+  }
+});
+// the other view-model does not know about my-component
+new Vue({
+  el: '#another-app'
+});
+```
+
+### Vue files
+Vue files contain template markup, script and styles. Project is scaffolded
+with vue-cli's **webpack basic** template.
+
+```html
+<!-- MyComponent.vue -->
+<template>
+  <!-- if you have sibling elements, wrap them -->
+  <div>
+    <h1>welcome to my {{ variable }}</h1>
+    <span>sibling element</span>
+  </div>
+</template>
+
+<script>
+  export default {
+    data(){
+      return {
+        variable: 'template'
+      }
+    }
+  }
+</script>
+
+<style>
+body {
+  background-color: yellow;
+}
+</style>
+```
+
+```javascript
+// main.js
+import Vue from 'vue';
+import App from './App.vue';
+
+// import component
+import MyComponent from './MyComponent.vue';
+
+// register component
+Vue.component('my-component', MyComponent);
+
+new Vue({
+  el: '#app',
+  render: h => h(App)
+})
+
+```
+
+```html
+<!-- use component in App.vue -->
+<template>
+  <my-component></my-component>
+</template>
+```
+
+When the component is rendered in the DOM, it's not wrapped in a
+`<my-component>` tag.
+
+### Local sub-components
+If a component wraps another component and there's no need to declare the
+wrapped component globally, you can declare it local to the containing
+component.
+
+```html
+<!-- MyComponent.vue -->
+<template>
+  <div>
+    <h1>welcome to my {{ variable }}</h1>
+    <!-- You can make as many instances of this as you want -->
+    <my-other-component></my-other-component>
+  </div>
+</template>
+
+<script>
+  // local component imports are declared inside the importing component
+  import MyOtherComponent from './MyOtherComponent.vue'
+  export default {
+    data(){
+      return {
+        variable: 'component'
+      }
+    },
+    components: {
+      'my-other-component': MyOtherComponent
+    }
+  }
+</script>
+
+<style>
+body {
+  background-color: yellow;
+}
+</style>
+
+<!-- MyOtherComponent.vue -->
+<template>
+  <div>
+    <h1>{{ interpolateMe }}</h1>
+    <button @click="changeInterpolation">click here..</button>
+  </div>
+</template>
+
+<script>
+  export default {
+    data(){
+      return {
+        interpolateMe: 'all night long'
+      }
+    },
+    methods: {
+      changeInterpolation(){
+        this.interpolateMe = 'day after day';
+      }
+    }
+  }
+</script>
+```
+
+```javascript
+// same as javascript in 'Vue files' section
+```
+
+### Case in custom tags
+Because your vue files will be compiled to javascript, it's OK to use case
+sensitive tag names. Even if you use dash-case in the DOM, and camelCase in
+component registration.
