@@ -338,7 +338,7 @@ Applies an inline style of `display: none` to an element.
 ### `v-for`
 
 To iterate over a collection. The element that the directive is attached to,
-will be replicated. You will have access to the data for each iteration. The
+will be replicated. You have access to the data for each iteration. The
 first element will be the data for the current iteration and the select element
 is the loop index. If you have sibling elements to render, wrap them in a
 template tag.
@@ -425,7 +425,7 @@ const appTwo = new Vue({
     title: 'second app'
   },
   methods: {
-    chanceAppOneTitle() {
+    changeAppOneTitle() {
       // Direct access to app one's view-model.
       // Be aware that this does introduce very tight coupling...
       appOne.title = 'changed by app two';
@@ -723,10 +723,226 @@ body {
 ```
 
 ```javascript
-// same as javascript in 'Vue files' section
+// javascript is the same as javascript in 'Vue files' section
 ```
 
-### Case in custom tags
+#### Case in custom tags
 Because your vue files will be compiled to javascript, it's OK to use case
 sensitive tag names. Even if you use dash-case in the DOM, and camelCase in
-component registration.
+component registration. Vue figures it out so you can use compliant tag names
+even though the component is registered by a camelCased name.
+
+### Component style scoping
+By default, styles you define in the `<style>` section of a component, will be
+applied globally.
+If you want your styles to only be applied to the component they are defined
+in, add the `scoped` attribute.
+
+```html
+<!-- truncated -->
+<style scoped>
+div {
+  background-color: green;
+}
+</style>
+```
+
+`Vue` makes this work by automagically adding a data-attribute to the element,
+as well as a style tag in the head of the document referencing that attribute
+with an attribute selector, thereby scoping the scoped css to the element.
+
+## Component communication
+
+### Parent => child
+Using `props`, you pass data from the parent component to a child component.
+To inform a child component that it will receive `props`, add this property to
+the child component's view-model. Its value is an array of strings: The
+property names you should be able to set. If you're using the property
+interpolated in your template, it should match with a string in the array of
+properties.
+
+```html
+<!-- component passing a property -->
+<template>
+  <receiving-component some-property="{{ someValue }}"></receiving-component>
+</template>
+<!-- component receiving the property -->
+<template>
+  <div>
+    Check out my props: {{ some-property }}
+  </div>
+</template>
+<script>
+export default {
+  props: ['some-property']
+}
+</script>
+```
+
+Using properties like this will pass by value. This means that you will not
+have a dynamic updates of the value passed in to a component.
+
+To have the passed property value behave dynamically, use `v-bind`:
+
+```html
+<template>
+  <receiving-component v-bind:some-property="{{ someValue }}"></receiving-component>
+  <!-- or -->
+  <receiving-component :some-property="{{ someValue }}"></receiving-component>
+</template>
+```
+
+Usage of props is not limited to template, you can also use props in methods.
+
+```javascript
+export default {
+  methods: {
+    replaceSomeValue(){
+      return `replaced: ${this.someValue}`;
+    }
+  }
+}
+```
+
+### Prop validation
+To validate the properties being passed into a component, change the `props`
+property to an object. You can add a single constructor of which type the
+property is allowed to be, or you can add multiple constructors as an array.
+
+Vue will error out if you pass the wrong type of value for a property.
+
+```javascript
+// ..truncated
+props: {
+  someValue: [ String, Object ]
+}
+```
+
+You can take this a step further, by adding passing object instead of an array
+of constructors.
+
+```javascript
+// ..truncated
+props: {
+  someValue: {
+    type: String,
+    required: true,
+    // or
+    default: 'my default value'
+  }
+}
+```
+
+If you intend to pass an object (or another reference type) as the default
+value for a prop, make sure that it's returned from a function, for the same
+reason you return it from a function when specifying component data.
+Primitive can be returned as-is.
+
+### Child => parent
+To communicate changes from child to parent component, custom events are used.
+Vue provides the `$emit` method for this, which receives an event name and,
+optionally, some event data.
+
+```html
+<!-- child component -->
+<script>
+  export default {
+    methods: {
+      this.$emit('myCustomEvent', 'someEventData');
+    }
+  }
+</script>
+<!-- parent component -->
+<template>
+  <child-component @myCustomEvent="handleCustomEvent($event)">
+</template>
+<script>
+  export default {
+    methods: {
+      handleCustomEvent(eventData){
+        // you can now do stuff with the received event data.
+      }
+    }
+  }
+</script>
+```
+
+An alternative to using an event to communicate from child to parent, is to
+have the parent component pass a callback function to the child component,
+which is executed in the child component, but manipulates data in the parent.
+
+Here, The `setName` method is defined on the parent, but executed as a click
+handler inside the child component.
+
+```html
+<!-- parent component -->
+<template>
+  <div>
+    <my-component :setName="setName"></my-component>
+    <h1>{{ myName }}</h1>
+  </div>
+</template>
+<script>
+import MyComponent from './MyComponent.vue';
+export default {
+  data() {
+    return {
+      myName: 'foo'
+    }
+  },
+  components: {
+    myComponent: MyComponent
+  },
+  methods: {
+    setName(){
+      this.myName = 'bar';
+    }
+  }
+}
+</script>
+
+<!-- child component -->
+<template>
+  <div>
+    <button @click="setName">set name</button>
+  </div>
+</template>
+
+<script>
+  export default {
+    props: {
+      setName: {
+        type: Function
+      }
+    }
+  }
+</script>
+```
+
+### Communication between sibling components
+Sibling components should not communicate directly. Instead, the should
+communicate through an event bus. This event bus can be the parent, where they
+share a reference to a variable. Better even is to create a completely
+separated event bus. This event bus is a Vue instance. Use that instance as an
+event bus only, or attach other centralized data/behavior to it.
+
+```javascript
+// in main.js, before app bootstrap, export the event bus.
+export const eventBus = new Vue();
+
+// in a component
+import { eventBus } from './main';
+// in an event handler function in that component..
+eventBus.$emit('myEvent', 'myEventData');
+
+// in a sibling component
+import { eventBus } from './main';
+// attach a listener to the event bus during the component 'created' lifecycle
+// hook
+created(){
+  eventBus.$on('myEvent', eventData => {
+    // do something with event data
+  });
+}
+
+```
