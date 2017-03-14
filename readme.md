@@ -944,5 +944,79 @@ created(){
     // do something with event data
   });
 }
-
 ```
+
+### Slots
+Allow you to transclude markup. Add a `<slot></slot>` where you want to output
+the transcluded markup. The markup that is passed, receives its css from what
+is declared in the component where it's rendered.
+
+On the other hand, data interpolation happens based on the data that is
+available in the parent component.
+
+```html
+<!-- parent component -->
+<template>
+  <my-component>
+    <!-- interpolation happens in the parent component -->
+    <h1>{{ heading }}</h1>
+    <p>some text</p>
+  </my-component>
+</template>
+<script>
+  export default {
+    data(){
+      return {
+        heading: 'some heading'
+      }
+    }
+  }
+</script>
+
+<!-- child component -->
+<template>
+  <div>
+    <slot></slot>
+  </div>
+</template>
+<style>
+  /* transcluded markup will receive styling from this declaration */
+  h1 {
+    background-color: yellow;
+  }
+</style>
+```
+
+#### Multiple (named) slots
+By adding a `name` attribute to a slot, you can add multiple transclusion
+points to your markup.
+
+```html
+<!-- In parent -->
+<child-component>
+  <h1 slot="title">Title</h1>
+  <p slot="content">Lorem ipsum...</p>
+</child-component>
+<!-- In child -->
+<div>
+  <header>
+    <slot name="title"></slot> <!-- Title -->
+  </header>
+  <main>
+    <slot name="content"></slot> <!-- Lorem ipsum... -->
+  </main>
+</div>
+```
+
+#### Default slot
+Not adding a name attribute to a single slot will make that particular slot the
+default location to place content. Any content enclosed in the component's
+tags that don't have a `slot` attribute defined, will be placed in the default
+slot.
+
+#### Placeholder content
+Any `textContent` enclosed by a slot tag, is its default value. If you don't
+specify content for that slot, it will be shown.
+
+### Dynamic components
+TODO
