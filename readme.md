@@ -1019,4 +1019,424 @@ Any `textContent` enclosed by a slot tag, is its default value. If you don't
 specify content for that slot, it will be shown.
 
 ### Dynamic components
-TODO
+`<component></component>`
+Is a reserved tagname, which acts as a slot for a **dynamic component**.
+With the `:is` binding, you specify the name of the component that should be
+loaded in its place.
+
+```html
+<!-- App.vue -->
+<template>
+  <div>
+    <h1>dynamic components</h1>
+    <button @click="selectedComponent = 'foo-component'">foo</button>
+    <button @click="selectedComponent = 'bar-component'">bar</button>
+    <component :is="selectedComponent"></component>
+  </div>
+</template>
+<script>
+  import MyComponent from './MyComponent.vue';
+  import Foo from './FooComponent.vue';
+  import Bar from './BarComponent.vue';
+
+  export default {
+    data(){
+      return {
+        selectedComponent: 'my-component'
+      }
+    },
+    components: {
+      myComponent: MyComponent,
+      fooComponent: Foo,
+      barComponent: Bar,
+
+    }
+  }
+</script>
+
+<!-- also loaded: -->
+<!-- MyComponent.vue -->
+<!-- FooComponent.vue -->
+<!-- BarComponent.vue -->
+```
+
+#### State
+By default, Switching between dynamic components will destroy and recreate
+instances, so any state will be lost.
+
+You can override this default behavior by wrapping the `component` in
+`<keep-alive></keep-alive>` tags. This will make sure stored `data` survives.
+
+#### Lifecycle hooks
+
+`activated` and `deactivated` are hooks that relate specifically to dynamic
+components. Whenever a dynamic component loads and becomes active, its
+**activated** hook will fire. When un-loading this component, you'll see its
+**deactivated** hook fire.
+
+## Forms
+`v-model` is used for 2-way data binding between your VM data and form inputs.
+You can group related for data properties by nesting them inside an object.
+
+You pre-populate form fields by filling in their values in the data object in
+the VM.
+
+```html
+<template>
+  <div>
+    <form>
+      <input type="text" v-model="userData.name">
+      <input type="text" v-model="userData.age">
+      <input type="text" v-model="userData.password">
+    </form>
+    <section>
+      <p>name: { userData.name }}</p>
+      <p>name: { userData.age }}</p>
+      <p>name: { userData.password }}</p>
+    </section>
+  </div>
+</template>
+<script>
+  export default {
+    data(){
+      userData: {
+        name: 'The User',
+        age: '33',
+        password: 'secret'
+      }
+    }
+  }
+</script>
+```
+
+### Input modifiers
+
+`v-model` takes optional modifiers to change the way it binds to the underlying
+data.
+
+* `v-model.lazy` Updates the data on **change** instead of on **input**.
+* `v-model.trim` Trims excess whitespace from the value.
+* `v-model.number` Converts value to a number. This only works if the value can
+be converted to a number, else it will fall back to string.
+
+### Working with textarea
+With textareas, you have to use `v-model` to set a default value. Adding
+text between the textarea's opening and closing tags, will not work.
+
+To preserve line breaks in a textarea's value that is bound, set a regular
+style attribute `style="white-space: pre"`.
+
+### Working with checkboxes
+
+To add the values of multiple checked checkboxes to an array, declare a data
+property as an array and bind it to checkboxes. If you want to pre-select
+checkboxes, add their values to the bound array up front.
+
+```html
+<!-- truncated -->
+<input type="checkbox" value="apples" v-model="fruits"> apples
+<input type="checkbox" value="oranges" v-model="fruits"> oranges
+<!-- trucated -->
+<script>
+// truncated
+data(){
+  return {
+    myName: 0,
+    fruits: []
+  }
+}
+// truncated
+</script>
+```
+
+### The select element
+Loop to create the options for a select. To mark an option as selected,
+pre-populate the variable you bind with `v-model`, or add the `:selected`
+property to the options. `v-model` will override `:selected`.
+
+```html
+<template>
+  <div>
+    <form>
+      <select id="fruit" v-model="selectedFruit">
+        <option v-for="fruit in fruits" :value="fruit">{{ fruit }}</option>
+      </select>
+      <output for="fruit">{{ selectedFruit }}</output>
+    </form>
+  </div>
+</template>
+<script>
+  export default {
+    data(){
+      return {
+        selectedFruit: 'oranges',
+        fruits: [
+          'apples',
+          'oranges',
+          'bananas'
+        ]
+      }
+    }
+  }
+</script>
+```
+
+### Custom controls
+To use `v-model` on a custom element, you have to implement its interface.
+Under the hood, `v-model` just adds a `:value` binding to an element for
+setting a value on the control, and also listens for events being emitted for
+getting its value (`input` by default).
+
+```html
+<!-- in App.vue -->
+<template>
+  <div>
+    <form>
+      <my-control v-model="myControlState"></my-control>
+      <output>my-control is {{ myControlState ? 'on' : 'off' }}</output>
+    </form>
+  </div>
+</template>
+<script>
+  import MyControl from './MyControl.vue';
+  export default {
+    components: {
+      myControl: MyControl
+    },
+    data(){
+      return {
+        myControlState: true
+      }
+    }
+  }
+</script>
+
+<!-- in MyControl.vue -->
+<template>
+  <div>
+    <form>
+      <div class="control">
+        <span @click="toggle(true)"><span v-if="isOn">✔</span> on</span>
+        <span @click="toggle(false)"><span v-if="!isOn">✔</span> off</span>
+      </div>
+    </form>
+  </div>
+</template>
+<script>
+  export default {
+    data(){
+      return {
+        isOn: this.value
+      }
+    },
+    methods: {
+      toggle(value){
+        this.isOn = value;
+        this.$emit('input', this.isOn)
+      }
+    },
+    props: {
+      value: Boolean
+    }
+  }
+</script>
+```
+
+## Directives
+To create a custom directive, you have to register it. This can be done
+globally or locally.
+
+```javascript
+// global
+Vue.directive('my-directive', { /* lifecycle methods */ })
+// local to a component
+export default {
+  directives: {
+    myDirective: {
+      bind(el, binding, vNode) {
+        // code here
+      }
+    }
+  }
+}
+// directive is used `v-my-directive:argument.modifierN="value"`
+```
+You can pass a javascript object as value.
+
+### Lifecycle
+To add behavior to a directive, you can take advantage of 5 available lifecycle
+hooks.
+
+0. `bind(el, binding, vnode)` The directive is attached.
+0. `inserted(el, binding, vnode)` Inserted in parent node.
+0. `updated(el, binding, vnode, oldVnode)` Component is updated, but not its
+children.
+0. `componentUpdated(el, binding, vnode)` Component and children have been
+updated.
+0. `unbind(el, binding, vnode)` Directive is removed.
+
+Values you pass to the directive are available at `binding.value`
+
+```html
+<my-component v-my-directive="'foobar'"></my-component>
+```
+
+### Arguments
+To pass an argument to a custom directive, separate it from the directive name
+with a colon. Arguments are always interpreted as strings and can't pass
+more than one argument. The argument is available at `binding.arg`.
+
+```html
+<my-component v-my-directive:some-arg></my-component>
+```
+
+### Modifiers
+Modifiers are separated from the directive name with a dot. They are
+interpreted as boolean values, and you can have multiple. Modifiers become
+properties of `binding.modifiers`.
+
+## Filters
+Modify view-model data for presentation. Declare filter globally or locally.
+Filters can be chained.
+
+```javascript
+// global filter
+Vue.filter('my-filter', value => {
+  // return modified value
+});
+// local filter
+filters: {
+  myFilter (value) {
+    // return modified value
+  }
+}
+```
+
+For performance reasons, you should prefer using a computed property over using
+a filter.
+
+### Usage
+```html
+<template>
+  {{ myValue | filter-one | anotherFilter }}
+</template>
+```
+## Mixins
+To share data and behavior between multiple components, without the need to
+duplicate code. A mixin is a plain javascript object. Its properties will be
+merged with component properties where the mixin is applied. Component
+properties will have priority over mixin properties. If, however, your are
+adding lifecycle hooks by means of mixin, the lifeycle hooks will co-exist with
+hooks already present on the component. The component always gets the
+opportunity to override what a mixin adds.
+
+```javascript
+export default const myMixin {
+  data() {
+    return {
+      someProperty: 'override me',
+      anotherProperty: 'i will survive'
+    }
+  }
+}
+// in a component:
+export default {
+  mixins: [ myMixin ],
+  data(){
+    return {
+      someProperty: 'someProperty the component wins'
+      // anotherProperty will be added to the component data
+    }
+  }
+}
+```
+
+## HTTP
+Extend vue with **vue-resource** to allow it to conveniently make HTTP
+requests.
+
+```javascript
+import Vue from 'vue';
+import VueResource from 'vue-resource';
+
+Vue.use(VueResource);
+```
+
+This will make the `$http` property available on all Vue instances. Outside of
+vue instances, vue-resource is available as `Vue.http`.
+
+`$http` provides methods to perform HTTP requests. It's similar to
+`window.fetch`.
+
+### POST
+```javascript
+this.$http.post('http://some-endpoint-url', this.myDataProperty)
+  .then(console.log.bind(console))
+  .catch(console.error.bind(console))
+```
+
+### GET
+```javascript
+this.$http.get('http://some-endpoint-url')
+  .then(response => response.json())
+  .then(data => {
+    this.myValues = Object.values(data); // `this` is the Vue instance.
+  })
+  .catch(console.error.bind(console))
+```
+
+### Vue-resource options
+To set global options for Vue resource, use `Vue.http.options`.
+
+```javascript
+// e.g.: to set a root url
+Vue.http.options.root = 'https://my-global-endpoint';
+```
+
+Check out the [available options](https://github.com/pagekit/vue-resource/blob/develop/docs/config.md)
+
+### HTTP interceptors (middleware)
+Interceptors are stored as an array of functions, and are executed in order.
+Interceptor functions receive a request object and a callback. If you want to
+also manipulate the server response, you pass a callback to `next`. Note that
+the 'response' callback can only do synchronous processing, because it does not
+receive a `next` argument of its own.
+
+```javascript
+// Add an HTTP interceptor
+Vue.http.interceptors.push((request, next) => {
+  // sync/async do something with the request...
+  next(response => {
+    // synchronously do something with the response
+  });
+})
+```
+
+### `$resource`
+An abstraction to `$http`, that maps a local VM property to a remote resource.
+
+[resource manual](https://github.com/pagekit/vue-resource/blob/develop/docs/resource.md)
+
+```javascript
+// in a VM
+export default {
+  data(){
+    return {
+      resource: {},
+      user: {
+        username: '',
+        email: ''
+      }
+    }
+  },
+  methods: {
+    submitForm(){
+      // first argument represents query string parameters
+      this.resource.save({}, this.user);
+      // this will post the current user data to the endpoint defined below.
+    }
+  },
+  created(){
+    this.resource = this.$resource('http://some-endpoint');
+  }
+}
