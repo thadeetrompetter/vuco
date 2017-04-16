@@ -1440,3 +1440,544 @@ export default {
     this.resource = this.$resource('http://some-endpoint');
   }
 }
+```
+
+#### Custom Actions
+Extend resources with your own custom functionality.
+
+```javascript
+const customBehavior = {
+  // this property will become a method on your resource.
+  alternativePost: { method: 'POST', url: 'alternative.json' }
+};
+this.resource = this.$resource('data.json', {}, customBehavior);
+
+// in a handler method:
+this.resource.alternativePost({ /* data */ })
+```
+
+### Template URLs
+Templating according to the standard described at
+[uri.js](https://medialize.github.io/URI.js/uri-template.html).
+
+```javascript
+this.resource = this.$resource('{key}.json', {}, {
+  getData: { method: 'GET' }
+});
+
+// pass an object to the custom handler to do some templating
+this.resource.getData({ key: 'will-be-added-to-url' })
+```
+## Animation
+Animate elements with the `<transition name="your-transition"></transition>`
+tag. Vue will read css to find out how long an animation should take, and
+attach css classes to the element wrapped in the `transition` tag.
+
+Vue associates a transition with value of the `name` property set to
+`your-transition` with the following css classes:
+
+```css
+.your-transition-enter {}
+.your-transition-enter-active {}
+.your-transition-leave {}
+.your-transition-leave-active {}
+```
+
+You can use these styling hooks to respond to the element changing visibility.
+You can use `animation` or `transition` to animate. If you want to coerce Vue
+to look at the duration for either of these animation types, specify a `type`
+property on the `transition` element.
+
+### `appear`
+This attribute makes the element transition in on page load.
+
+### Custom animation classnames
+Use `enter[-active]-class` and `leave[-active]-class` to override the default
+animation classnames.
+
+### Transitions between elements
+Adding multiple elements to the same transition tag is possible, but this
+requires you to add unique `key` properties to both elements, to make Vue
+understand how to differentiate between them.
+
+## Routing
+
+```sh
+npm install vue-router
+```
+
+```javascript
+// in main.js
+import Vue from 'vue';
+import VueRouter from 'vue-router';
+import App from './App.vue';
+import User from './User.vue';
+import Home from './Home.vue';
+
+// load router plugin
+Vue.use(VueRouter);
+
+// It's a good idea to declare your routes at root level
+const routes = [
+  { path: '', component: Home },
+  { path: '/user', component: User }
+];
+
+// instantiate a router with the defined routes
+const router = new VueRouter({ routes });
+
+new Vue({
+  el: '#app',
+  router,
+  render: h => h(App)
+})
+```
+
+```html
+<!-- App.vue -->
+<template>
+  <div>
+    <h1>Routing</h1>
+    <!-- Router will mount components here -->
+    <router-view></router-view>
+  </div>
+</template>
+
+<!-- User.vue -->
+<template>
+  <h1>User route</h1>
+</template>
+
+<!-- Home.vue -->
+<template>
+  <h1>Home route</h1>
+</template>
+```
+
+### `<router-link>`
+
+a replacement for the regular anchor tag, which ensures that no http request
+goes out to the server for clicking on a link.
+
+```html
+<router-link to="/absolute-path"></router-link>
+<router-link to="relative-path"></router-link>
+```
+
+Inserting a `router-link` will translate to an anchor tag on the page with its
+default behavior prevented.
+
+#### Alternative linkage
+To use a different element from the default anchor that `router-link` places on
+the page, you can attach the link behavior to an alternative element with the
+`tag` attribute. This is handy if you want to display the active state on a
+list item in a list, instead of on the anchor nested inside.
+
+0. The `active-class` attribute allows overriding the default class
+`router-link-active`
+0. `exact` will make sure the uri path only triggers an active link when it
+exactly matches the value of the `to` attribute.
+
+```html
+<ul>
+  <router-link to="/" tag="li" active-class="active" exact><a>main</a></router-link>
+  <router-link to="/other-route" tag="li" active-class="active"><a>other</a></router-link>
+</ul>
+```
+
+### The `$router` instance
+You control the router programmatically via `this.$router`.
+
+0. `this.$router.push()` to navigate. `push` takes a route string or an object,
+allowing for more options.
+
+### Route parameters
+Define a dynamic route segment by prepending it with a colon.
+
+```javascript
+const routes = [{ path: '/user/:id', component: User }]
+```
+The `id` parameter will now be available at `this.$route.params.id`.
+
+Be aware that, because of component caching, the id value will only be
+populated once. Watch the `$route` property to get updates properly.
+In **vue-router** v2.2 and up, you can pass route parameters as properties,
+which eliminates the need for **watch** demonstrated below.
+
+```javascript
+export default {
+  data(){
+    return {
+      id: this.$route.params.id
+    }
+  },
+  watch: {
+    '$route'(to, from){
+      this.id = to.params.id
+    }
+  }
+}
+```
+
+### Child routes
+Nest child routes in the `children` property on another route.
+
+```javascript
+const routes = [
+  { path: '', component: Home },
+  { path: '/user/:id/edit', component: User, children: [
+    { path: '', component: MyComponent },
+    { path: 'other', component: MyOtherComponent }
+  ]}
+];
+```
+
+### Named routes
+For more convenient linking, add a name property to a route you want to link
+to.
+
+```javascript
+// in a routes definition...
+{ path: '/user/:id/edit', component: UserEdit, name: 'userEdit' }
+```
+
+```html
+<router-link :to="{ name: 'userEdit', params: { id: 'some-dynamic-id'} }"></router-link>
+```
+
+### Query string parameters
+
+Will be appended to the `query` property of `$route`.
+
+```html
+<router-link :to="{ name: 'someRoute', query: { foo: 'bar', lang: 'EN'} }"></router-link>
+```
+
+```javascript
+// in a VM
+const lang = this.$route.query.lang; // EN
+const foo = this.$route.query.foo; // bar
+```
+
+### Named router views
+In situation where you want page layout to be different for different routes,
+use [**named views**](http://router.vuejs.org/en/essentials/named-views.html)
+
+```javascript
+// example
+```
+
+### Redirecting
+Use the `redirect` property on a route object.
+
+```javascript
+const routes = [
+  { path: '/', component: Home },
+  { path: '/user', component: User },
+  { path '/redirect', redirect: '/user' }, // specific redirect
+  { path: '*', redirect: '/' } // catch-all route
+]
+```
+
+### Animating route transitions
+
+```html
+<transition name="my-transition-name" mode="out-in">
+  <router-view></router-view>
+</transition>
+```
+
+### Hash changes
+Add the `hash` property to a `router-link`'s `to` attribute.
+
+To animate navigation to a hash location on the page, add the `scrollBehavior`
+method to  `vue-router` instantiation options.
+
+```javascript
+const router = new VueRouter({
+  // ..trucated..
+  scrollBehavior(to, from, savedPosition){
+    // based on selector
+    return {
+      selector: to.hash
+    }
+    // or to the last saved position, if there is any
+    if(savedPosition){
+      return savedPosition;
+    }
+    // fallback
+    return { // hard-coded
+      x: 0,
+      y: 0
+    },
+  }
+});
+```
+
+### beforeEnter / beforeLeave
+Execute code before a route is handled. The **global** foreach is executed
+before each routs in the application and is defined on the `router` instance.
+
+#### Global
+
+```javascript
+router.beforeEach((to, from, next) => {
+  console.log('global: before routing');
+  next();
+});
+```
+
+#### Local
+
+The local route intercept option is defined for a specific route definition.
+
+```javascript
+const userRoute = { path: '/user', component: User, beforeEnter: (to, from, next) => {
+  console.log('local: before enter');
+  next();
+}},
+```
+
+#### Component level
+Use the component lifecycle hook `beforeRouteEnter` in a component VM.
+Note that you cannot access the `data` property from inside this hook function.
+
+### Lazy loading routes
+Load components on demand, instead of all at once, to leverage code splitting
+and possibly http2. Webpack's `require.ensure` is used to keep certain modules
+out of you main bundle.
+
+```javascript
+const User = resolve => {
+  require.ensure(['./src/User.vue'], () => {
+    resolve(require('./src/User.vue'));
+  }, 'group-id')
+}
+```
+
+If a **group-id** is specified (must be a string), you can group related
+components together to form a single bundle, which gets loaded once.
+
+## Vuex
+Keep application state in a central store.
+For vue applications, it's idiomatic to store vuex related files in a `store`
+directory, at the same level as your `components` folder.
+
+```javascript
+// in store/store.js
+import Vue from 'vue';
+import Vuex from 'vuex';
+
+Vue.use(Vuex);
+
+export const store = new Vuex.Store({
+  state: {
+    counter: 0
+  }
+});
+
+// in main.js
+import { store } from './store/store';
+
+new Vue({
+  el:'#app',
+  store, // register store to your root Vue instance
+  // ..truncated..
+})
+```
+
+```html
+<!-- simple counter example -->
+<template>
+  <div>
+    <h1>Vuex</h1>
+    <p>{{ counter }}</p>
+    <button @click="increment">increment</button>
+    <button @click="decrement">decrement</button>
+  </div>
+</template>
+<script>
+export default {
+  computed: {
+    counter(){
+      return this.$store.state.counter;
+    }
+  },
+  methods: {
+    increment(){
+      this.$store.state.counter++;
+    },
+    decrement(){
+      this.$store.state.counter--;
+    }
+  }
+}
+</script>
+```
+
+### Getters
+Getters are like computed properties for your store. They allow you to keep
+manipulations on read operations DRY.
+
+```javascript
+export const store = new Vuex.Store({
+  state: {
+    counter: 0
+  },
+  getters: {
+    double(state){ // all getters receive state as argument.
+      return state.counter * 2;
+    }
+  }
+});
+```
+
+`vuex` provides the `mapGetters` helper function. This function creates
+computed properties on a component for the getters you specify.
+
+Keep in mind that you might need an additional babel plugin to be able to use
+`Object.spread` notation.
+
+```html
+<script>
+  import { mapGetters } from 'vuex';
+  export default {
+    computed: {
+      ...mapGetters([
+        'double', // you can now use this vuex getter as computed property in your template
+        '...' // and so on
+      ]),
+      anotherComputed(){
+        // code here
+      }
+    }
+  }
+</script>
+```
+
+### Mutations
+Change state.
+
+```javascript
+// in store.js
+export const store = new Vuex.Store({
+  state: {
+    counter: 0
+  },
+  mutations: {
+    increment(state){
+      state.counter++;
+    },
+    decrement(state){
+      state.counter--;
+    }
+  }
+});
+
+// in component script
+import { mapMutations } from 'vuex';
+{
+  methods: {
+    increment(){
+      this.$store.commit('increment');
+    },
+    decrement(){
+      this.$store.commit('decrement');
+    },
+    // note you can also use the helper `mapMutations` here in methods.
+    ...mapMutations([
+      'increment',
+      'decrement'
+    ])
+  }
+}
+```
+
+This is all well and good, but all these mutations are required to run
+synchronously, if you want to avoid race conditions.
+
+### Actions
+
+To be able to queue tasks that run asynchronously, use **actions**.
+
+Actions get passed a `context` object, of which you can call the `commit`
+method after a (potentially) asynchronous task has completed.
+
+```javascript
+// in store.js
+export const store = new Vuex.Store({
+  mutations: {
+    increment: // ...
+  },
+  actions: {
+    increment(context) {
+      setTimeout(() => { // do something after a while
+        context.commit('increment');
+      }, 100)
+    }
+  }
+});
+// in component script
+import { mapActions } from 'vuex';
+export default {
+  methods: {
+    ...mapActions([
+      'increment'
+    ]),
+    // possibly other methods here ...
+  }
+}
+```
+
+Actions you have defined, receive an optional **payload** as second argument.
+
+### Vuex and `v-model`
+
+Wire up v-model to your store by using a writable computed property.
+
+```javascript
+// in store.js
+export const store = new Vuex.Store({
+  state: {
+    value: 'hoi'
+  },
+  getters: {
+    value(state){
+      return state.value;
+    }
+  },
+  mutations: {
+    value(state, payload){
+      state.value = payload;
+    }
+  },
+  actions: {
+    updateValue({commit}, payload){
+      commit('value', payload);
+    }
+  }
+});
+```
+```html
+<template>
+  <div>
+    <h1>Vuex</h1>
+    <input v-model="value">
+    <p>{{ value }}</p>
+  </div>
+</template>
+<script>
+export default {
+  computed: {
+    value: {
+      get(){
+        return this.$store.getters.value;
+      },
+      set(value){
+        this.$store.dispatch('updateValue', value)
+      }
+    }
+  }
+}
+</script>
+```
